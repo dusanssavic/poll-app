@@ -44,7 +44,7 @@ func runServer(cmd *cobra.Command, args []string) error {
 
 func healthCheck(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 	w.WriteHeader(http.StatusOK)
-	if _, err := w.Write([]byte("OK")); err != nil {
+	if _, err := w.Write([]byte("We are Up!")); err != nil {
 		log.Printf("Failed to write health check response: %v", err)
 	}
 }
