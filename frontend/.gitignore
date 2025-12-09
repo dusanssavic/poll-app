@@ -1,0 +1,19 @@
+# Dependencies
+node_modules/
+
+# React Router
+.react-router/
+build/
+
+# Vite
+dist/
+.vite/
+
+# TypeScript
+*.tsbuildinfo
+
+# Package manager logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
