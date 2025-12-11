@@ -34,6 +34,46 @@ backend/
 - PostgreSQL 16+ (or use Docker Compose)
 - Redis 7+ (or use Docker Compose)
 - Go 1.25.5+
+- Docker and Docker Compose (for containerized development)
+
+### Quick Start with Makefile
+
+The easiest way to develop is using the Makefile, which handles container setup and environment configuration automatically.
+
+#### Run tests (automatically starts containers if needed)
+```bash
+make test
+```
+
+#### Start all services in containers (postgres, redis, backend)
+```bash
+make dev
+```
+
+This will start all containers including the backend service. The backend API will be available at `http://localhost:8080` and ready for your frontend to connect.
+
+#### Stop containers
+```bash
+make clean
+```
+
+#### View all available commands
+```bash
+make help
+```
+
+### Makefile Targets
+
+- **`make test`**: Run Go tests with proper environment variables pointing to containers (automatically starts postgres and redis if needed)
+- **`make dev`**: Start all containers (postgres, redis, backend) - everything runs in containers
+- **`make clean`**: Stop and remove containers
+- **`make build`**: Build the Go binary
+- **`make generate`**: Generate ent code
+- **`make fmt`**: Format Go code with gofmt
+- **`make lint`**: Run gofmt check
+- **`make help`**: Display available targets with descriptions
+
+### Manual Development (without Makefile)
 
 ### Environment Variables
 
