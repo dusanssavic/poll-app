@@ -34,7 +34,7 @@ services:
   backend:
     build:
       context: ./backend
-      dockerfile: Dockerfile
+      dockerfile: Dockerfile.dev
     container_name: poll-app-backend
     ports:
       - "8080:8080"
@@ -46,6 +46,13 @@ services:
       POSTGRES_PASSWORD: pollapp
       REDIS_HOST: redis
       REDIS_PORT: 6379
+    volumes:
+      # Mount source code for hot reloading
+      - ./backend:/app
+      # Exclude tmp directory to avoid conflicts
+      - /app/tmp
+      # Exclude bin directory
+      - /app/bin
     depends_on:
       postgres:
         condition: service_healthy
