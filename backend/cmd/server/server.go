@@ -90,10 +90,32 @@ func runServer(cmd *cobra.Command, args []string) error {
 	router.GET("/api/polls/:id/votes", voteController.GetVoteCounts)              // Public
 	router.GET("/api/polls/:id/votes/:option", voteController.GetVotersByOption)  // Public
 
+	// Wrap router with CORS middleware
+	handler := corsMiddleware(router)
+
 	addr := fmt.Sprintf("%s:%s", host, port)
 	log.Printf("Starting server on %s", addr)
 
-	return http.ListenAndServe(addr, router)
+	return http.ListenAndServe(addr, handler)
+}
+
+func corsMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// Set CORS headers
+		w.Header().Set("Access-Control-Allow-Origin", "*")
+		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
+		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
+		w.Header().Set("Access-Control-Max-Age", "3600")
+
+		// Handle preflight requests
+		if r.Method == "OPTIONS" {
+			w.WriteHeader(http.StatusOK)
+			return
+		}
+
+		// Call the next handler
+		next.ServeHTTP(w, r)
+	})
 }
 
 func healthCheck(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
