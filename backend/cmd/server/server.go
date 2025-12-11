@@ -124,4 +124,3 @@ func healthCheck(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 		log.Printf("Failed to write health check response: %v", err)
 	}
 }
-// trigger rebuild
