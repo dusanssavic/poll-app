@@ -7,11 +7,12 @@
     "dev": "react-router dev",
     "start": "react-router-serve ./build/server/index.js",
     "typecheck": "react-router typegen && tsc",
-    "generate-api": "openapi-generator-cli generate -i ../backend/api/openapi.json -g typescript-axios -o src/api/generated --additional-properties=supportsES6=true,npmName=poll-app-api,withInterfaces=true"
+    "generate-api": "npx openapi-typescript-codegen --input ../backend/api/openapi.json --output app/lib/api/generated --client axios"
   },
   "dependencies": {
     "@react-router/node": "7.10.1",
     "@react-router/serve": "7.10.1",
+    "axios": "^1.13.2",
     "isbot": "^5.1.31",
     "react": "^19.2.1",
     "react-dom": "^19.2.1",
@@ -23,6 +24,7 @@
     "@types/node": "^22",
     "@types/react": "^19.2.7",
     "@types/react-dom": "^19.2.3",
+    "openapi-typescript-codegen": "^0.29.0",
     "tailwindcss": "^4.1.13",
     "typescript": "^5.9.2",
     "vite": "^7.1.7",

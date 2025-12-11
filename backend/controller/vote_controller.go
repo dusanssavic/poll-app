@@ -97,6 +97,10 @@ func (c *VoteController) GetVoteCounts(w http.ResponseWriter, r *http.Request, p
 
 	counts, err := c.service.GetVoteCounts(r.Context(), pollID)
 	if err != nil {
+		if err.Error() == "poll not found" {
+			http.Error(w, "Poll not found", http.StatusNotFound)
+			return
+		}
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
@@ -126,6 +130,10 @@ func (c *VoteController) GetVotersByOption(w http.ResponseWriter, r *http.Reques
 
 	voters, err := c.service.GetVotersByOption(r.Context(), pollID, option)
 	if err != nil {
+		if err.Error() == "poll not found" || err.Error() == "option not found" {
+			http.Error(w, err.Error(), http.StatusNotFound)
+			return
+		}
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}

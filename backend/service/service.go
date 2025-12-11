@@ -205,10 +205,34 @@ func (s *service) VoteOnPoll(ctx context.Context, userID, pollID uuid.UUID, opti
 }
 
 func (s *service) GetVoteCounts(ctx context.Context, pollID uuid.UUID) (map[string]int, error) {
+	// Validate poll exists
+	_, err := s.storage.GetPollByID(ctx, pollID)
+	if err != nil {
+		return nil, errors.New("poll not found")
+	}
+
 	return s.storage.GetVoteCountsByPoll(ctx, pollID)
 }
 
 func (s *service) GetVotersByOption(ctx context.Context, pollID uuid.UUID, option string) ([]*ent.User, error) {
+	// Validate poll exists
+	poll, err := s.storage.GetPollByID(ctx, pollID)
+	if err != nil {
+		return nil, errors.New("poll not found")
+	}
+
+	// Validate option is in poll options
+	validOption := false
+	for _, opt := range poll.Options {
+		if opt == option {
+			validOption = true
+			break
+		}
+	}
+	if !validOption {
+		return nil, errors.New("option not found")
+	}
+
 	votes, err := s.storage.GetVotesByPollAndOption(ctx, pollID, option)
 	if err != nil {
 		return nil, err
