@@ -1,0 +1,9 @@
+# Generated files
+generated/
+*.generated.*
+
+# Temporary files
+*.tmp
+*.swp
+*~
+

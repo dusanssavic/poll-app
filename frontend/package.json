@@ -6,7 +6,8 @@
     "build": "react-router build",
     "dev": "react-router dev",
     "start": "react-router-serve ./build/server/index.js",
-    "typecheck": "react-router typegen && tsc"
+    "typecheck": "react-router typegen && tsc",
+    "generate-api": "openapi-generator-cli generate -i ../backend/api/openapi.json -g typescript-axios -o src/api/generated --additional-properties=supportsES6=true,npmName=poll-app-api,withInterfaces=true"
   },
   "dependencies": {
     "@react-router/node": "7.10.1",
