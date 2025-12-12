@@ -1,110 +1,49 @@
 # API Documentation
 
-This directory contains the OpenAPI 3.0 specification for the Poll App API in JSON format.
+This directory contains the OpenAPI 3.0 specification for the Poll App API.
 
 ## Files
 
-- `openapi.yaml` - Complete OpenAPI 3.0 specification in YAML format (source of truth)
-- `openapi.json` - Complete OpenAPI 3.0 specification in JSON format (generated from YAML)
-- `types.gen.go` - Generated Go types from OpenAPI schema (auto-generated, do not edit)
+- `openapi.yaml` - OpenAPI 3.0 specification in YAML format (source of truth)
+- `openapi.json` - OpenAPI 3.0 specification in JSON format
+- `types.gen.go` - Generated Go types (auto-generated, do not edit)
 
-## Generate Go Types for Backend
+## Generating Code from OpenAPI Schema
 
-The backend uses [oapi-codegen](https://github.com/oapi-codegen/oapi-codegen) to generate Go structs from the OpenAPI schema.
+When you update the OpenAPI schema, regenerate both backend and frontend code:
 
-**Generate Go types:**
+### Backend (Go Types)
+
 ```bash
 cd backend
-make generate
-# or
-go generate ./api
+make generate-api
 ```
 
-This will generate `api/types.gen.go` with all request/response types defined in the OpenAPI schema.
+This generates `api/types.gen.go` with all request/response types using [oapi-codegen](https://github.com/oapi-codegen/oapi-codegen).
 
-**Note:** The generated file is in `.gitignore` and should be regenerated when the OpenAPI schema changes.
-
-## Generate TypeScript Client for Frontend
-
-Using [openapi-generator](https://openapi-generator.tech/) (recommended):
+### Frontend (TypeScript Client)
 
 ```bash
-# Install openapi-generator
-npm install -g @openapitools/openapi-generator-cli
-
-# Generate TypeScript client
-openapi-generator-cli generate \
-  -i backend/api/openapi.json \
-  -g typescript-axios \
-  -o frontend/src/api/generated \
-  --additional-properties=supportsES6=true,npmName=poll-app-api,withInterfaces=true
+cd frontend
+npm run generate-api
 ```
 
-Or using [swagger-codegen](https://swagger.io/tools/swagger-codegen/):
+This generates TypeScript types and API client in `app/lib/api/generated/` using [openapi-typescript-codegen](https://github.com/ferdikoomen/openapi-typescript-codegen).
 
-```bash
-swagger-codegen generate \
-  -i backend/api/openapi.json \
-  -l typescript-axios \
-  -o frontend/src/api/generated
-```
+## Workflow
 
-## View API Documentation
+When adding or modifying API endpoints:
 
-You can view the API documentation using:
+1. Update `openapi.yaml` (source of truth)
+2. Update `openapi.json` to match
+3. Regenerate backend types: `cd backend && make generate-api`
+4. Regenerate frontend client: `cd frontend && npm run generate-api`
+5. Update code that uses the API
 
-1. **Swagger UI**: Upload `openapi.json` to https://editor.swagger.io/
-2. **Redoc**: Use https://redocly.github.io/redoc/ or install locally
-3. **Postman**: Import the OpenAPI spec into Postman
+**Note:** Generated files are in `.gitignore` and should be regenerated on each machine.
 
-## Validate the Specification
+## Viewing API Documentation
 
-Validate the OpenAPI spec:
-
-```bash
-# Using swagger-cli
-npm install -g @apidevtools/swagger-cli
-swagger-cli validate backend/api/openapi.json
-
-# Using openapi-generator
-openapi-generator-cli validate -i backend/api/openapi.json
-```
-
-## Integration with Frontend
-
-The generated TypeScript client can be used in the frontend like this:
-
-```typescript
-import { DefaultApi, Configuration } from './api/generated';
-
-const api = new DefaultApi(new Configuration({
-  basePath: 'http://localhost:8080',
-  accessToken: () => localStorage.getItem('access_token') || ''
-}));
-
-// Use the API
-const polls = await api.listPolls();
-const poll = await api.createPoll({
-  title: 'My Poll',
-  options: ['Option 1', 'Option 2']
-}, {
-  headers: {
-    'Authorization': `Bearer ${localStorage.getItem('access_token')}`
-  }
-});
-```
-
-## Keeping the Spec in Sync
-
-When adding new endpoints or modifying existing ones:
-
-1. Update `backend/api/openapi.yaml` (source of truth)
-2. Update `backend/api/openapi.json` to match (or regenerate from YAML)
-3. Regenerate Go types: `cd backend && make generate`
-4. Regenerate the frontend client: `cd frontend && npm run generate-api`
-5. Update any code that uses the API
-
-**Workflow:**
-- Always update `openapi.yaml` first
-- Regenerate both Go types and TypeScript client
-- The generated files are in `.gitignore` and should be regenerated on each machine
+- **Swagger UI**: https://editor.swagger.io/ (upload `openapi.json`)
+- **Redoc**: https://redocly.github.io/redoc/ (upload `openapi.json`)
+- **Postman**: Import `openapi.json`

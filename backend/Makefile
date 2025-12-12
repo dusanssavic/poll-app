@@ -41,6 +41,7 @@ dev:
 	done
 	@echo "All services are running!"
 	@echo "Backend API available at http://localhost:8080"
+	@echo "API Documentation (Swagger UI) available at http://localhost:8081"
 	@echo "Use 'docker-compose -f $(COMPOSE_FILE) logs -f backend' to view backend logs"
 	@echo "Use 'make clean' to stop all containers"
 
