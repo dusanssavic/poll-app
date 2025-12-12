@@ -162,7 +162,7 @@ Each layer uses interfaces to enable testing and mock generation.
 
 ## API Documentation
 
-The API is fully documented using OpenAPI 3.0 specification. See `api/openapi.yaml` for complete documentation.
+The API is fully documented using OpenAPI 3.0 specification. See `api/openapi.json` for complete documentation.
 
 ### Quick Reference
 

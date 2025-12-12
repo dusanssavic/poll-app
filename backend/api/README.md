@@ -4,8 +4,7 @@ This directory contains the OpenAPI 3.0 specification for the Poll App API.
 
 ## Files
 
-- `openapi.yaml` - OpenAPI 3.0 specification in YAML format (source of truth)
-- `openapi.json` - OpenAPI 3.0 specification in JSON format
+- `openapi.json` - OpenAPI 3.0 specification in JSON format (source of truth)
 - `types.gen.go` - Generated Go types (auto-generated, do not edit)
 
 ## Generating Code from OpenAPI Schema
@@ -34,11 +33,10 @@ This generates TypeScript types and API client in `app/lib/api/generated/` using
 
 When adding or modifying API endpoints:
 
-1. Update `openapi.yaml` (source of truth)
-2. Update `openapi.json` to match
-3. Regenerate backend types: `cd backend && make generate-api`
-4. Regenerate frontend client: `cd frontend && npm run generate-api`
-5. Update code that uses the API
+1. Update `openapi.json` (source of truth)
+2. Regenerate backend types: `cd backend && make generate-api`
+3. Regenerate frontend client: `cd frontend && npm run generate-api`
+4. Update code that uses the API
 
 **Note:** Generated files are in `.gitignore` and should be regenerated on each machine.
 
