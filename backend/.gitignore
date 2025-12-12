@@ -21,3 +21,6 @@ go.work
 # Air hot reload temporary files
 tmp/
 build-errors.log
+
+# Generated API types
+api/types.gen.go

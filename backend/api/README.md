@@ -2,9 +2,27 @@
 
 This directory contains the OpenAPI 3.0 specification for the Poll App API in JSON format.
 
-## File
+## Files
 
-- `openapi.json` - Complete OpenAPI 3.0 specification in a single JSON file
+- `openapi.yaml` - Complete OpenAPI 3.0 specification in YAML format (source of truth)
+- `openapi.json` - Complete OpenAPI 3.0 specification in JSON format (generated from YAML)
+- `types.gen.go` - Generated Go types from OpenAPI schema (auto-generated, do not edit)
+
+## Generate Go Types for Backend
+
+The backend uses [oapi-codegen](https://github.com/oapi-codegen/oapi-codegen) to generate Go structs from the OpenAPI schema.
+
+**Generate Go types:**
+```bash
+cd backend
+make generate
+# or
+go generate ./api
+```
+
+This will generate `api/types.gen.go` with all request/response types defined in the OpenAPI schema.
+
+**Note:** The generated file is in `.gitignore` and should be regenerated when the OpenAPI schema changes.
 
 ## Generate TypeScript Client for Frontend
 
@@ -80,8 +98,13 @@ const poll = await api.createPoll({
 
 When adding new endpoints or modifying existing ones:
 
-1. Update `backend/api/openapi.json`
-2. Regenerate the frontend client using the command above
-3. Update any frontend code that uses the API
+1. Update `backend/api/openapi.yaml` (source of truth)
+2. Update `backend/api/openapi.json` to match (or regenerate from YAML)
+3. Regenerate Go types: `cd backend && make generate`
+4. Regenerate the frontend client: `cd frontend && npm run generate-api`
+5. Update any code that uses the API
 
-Consider adding a script to `package.json` to automate client generation.
+**Workflow:**
+- Always update `openapi.yaml` first
+- Regenerate both Go types and TypeScript client
+- The generated files are in `.gitignore` and should be regenerated on each machine

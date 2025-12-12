@@ -111,7 +111,9 @@ func (s *storage) GetPollByID(ctx context.Context, id uuid.UUID) (*ent.Poll, err
 		Query().
 		Where(poll.ID(id)).
 		WithOwner().
-		WithVotes().
+		WithVotes(func(vq *ent.VoteQuery) {
+			vq.WithUser()
+		}).
 		Only(ctx)
 }
 

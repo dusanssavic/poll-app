@@ -1,4 +1,4 @@
-.PHONY: test dev clean build generate fmt lint help
+.PHONY: test dev clean build generate generate-ent generate-api fmt lint help
 
 # Docker Compose file for development
 COMPOSE_FILE := ../docker-compose.dev.yml
@@ -56,11 +56,20 @@ build:
 	@go build -o bin/poll-app main.go
 	@echo "Binary built: bin/poll-app"
 
-## generate: Generate ent code
-generate:
+## generate: Generate ent code and API types
+generate: generate-ent generate-api
+
+## generate-ent: Generate ent code
+generate-ent:
 	@echo "Generating ent code..."
 	@go generate ./ent
 	@echo "Ent code generated."
+
+## generate-api: Generate API types from OpenAPI schema
+generate-api:
+	@echo "Generating API types from OpenAPI schema..."
+	@go generate ./api
+	@echo "API types generated."
 
 ## fmt: Format Go code with gofmt
 fmt:
@@ -86,7 +95,9 @@ help:
 	@echo "  make dev       - Start all containers (postgres, redis, backend)"
 	@echo "  make clean     - Stop and remove containers"
 	@echo "  make build     - Build the Go binary"
-	@echo "  make generate  - Generate ent code"
+	@echo "  make generate      - Generate ent code and API types"
+	@echo "  make generate-ent   - Generate ent code only"
+	@echo "  make generate-api   - Generate API types only"
 	@echo "  make fmt       - Format Go code with gofmt"
 	@echo "  make lint      - Run gofmt check"
 	@echo "  make help      - Display this help message"

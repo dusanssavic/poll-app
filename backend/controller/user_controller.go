@@ -4,11 +4,12 @@ import (
 	"encoding/json"
 	"net/http"
 
+	"poll-app/api"
 	"poll-app/auth"
 	"poll-app/service"
 
-	"github.com/google/uuid"
 	"github.com/julienschmidt/httprouter"
+	openapi_types "github.com/oapi-codegen/runtime/types"
 )
 
 // UserController handles user-related HTTP requests
@@ -25,37 +26,15 @@ func NewUserController(service service.UserService, jwtManager *auth.JWTManager)
 	}
 }
 
-// CreateUserRequest represents the request body for creating a user
-type CreateUserRequest struct {
-	Email    string `json:"email"`
-	Username string `json:"username"`
-	Password string `json:"password"`
-}
-
-// LoginRequest represents the request body for login
-type LoginRequest struct {
-	Email    string `json:"email"`
-	Password string `json:"password"`
-}
-
-// AuthResponse represents the response for authentication endpoints
-type AuthResponse struct {
-	AccessToken  string    `json:"access_token"`
-	RefreshToken string    `json:"refresh_token"`
-	UserID       uuid.UUID `json:"user_id"`
-	Email        string    `json:"email"`
-	Username     string    `json:"username"`
-}
-
 // CreateUser handles POST /api/users
 func (c *UserController) CreateUser(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
-	var req CreateUserRequest
+	var req api.CreateUserRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		http.Error(w, "Invalid request body", http.StatusBadRequest)
 		return
 	}
 
-	user, err := c.service.CreateUser(r.Context(), req.Email, req.Username, req.Password)
+	user, err := c.service.CreateUser(r.Context(), string(req.Email), req.Username, req.Password)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
@@ -74,12 +53,14 @@ func (c *UserController) CreateUser(w http.ResponseWriter, r *http.Request, _ ht
 		return
 	}
 
-	response := AuthResponse{
-		AccessToken:  accessToken,
-		RefreshToken: refreshToken,
-		UserID:       user.ID,
-		Email:        user.Email,
-		Username:     user.Username,
+	userID := openapi_types.UUID(user.ID)
+	email := openapi_types.Email(user.Email)
+	response := api.AuthResponse{
+		AccessToken:  &accessToken,
+		RefreshToken: &refreshToken,
+		UserId:       &userID,
+		Email:        &email,
+		Username:     &user.Username,
 	}
 
 	w.Header().Set("Content-Type", "application/json")
@@ -89,13 +70,13 @@ func (c *UserController) CreateUser(w http.ResponseWriter, r *http.Request, _ ht
 
 // Login handles POST /api/users/login
 func (c *UserController) Login(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
-	var req LoginRequest
+	var req api.LoginRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		http.Error(w, "Invalid request body", http.StatusBadRequest)
 		return
 	}
 
-	user, err := c.service.Login(r.Context(), req.Email, req.Password)
+	user, err := c.service.Login(r.Context(), string(req.Email), req.Password)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusUnauthorized)
 		return
@@ -114,26 +95,23 @@ func (c *UserController) Login(w http.ResponseWriter, r *http.Request, _ httprou
 		return
 	}
 
-	response := AuthResponse{
-		AccessToken:  accessToken,
-		RefreshToken: refreshToken,
-		UserID:       user.ID,
-		Email:        user.Email,
-		Username:     user.Username,
+	userID := openapi_types.UUID(user.ID)
+	email := openapi_types.Email(user.Email)
+	response := api.AuthResponse{
+		AccessToken:  &accessToken,
+		RefreshToken: &refreshToken,
+		UserId:       &userID,
+		Email:        &email,
+		Username:     &user.Username,
 	}
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(response)
 }
 
-// RefreshTokenRequest represents the request body for token refresh
-type RefreshTokenRequest struct {
-	RefreshToken string `json:"refresh_token"`
-}
-
 // RefreshToken handles POST /api/users/refresh
 func (c *UserController) RefreshToken(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
-	var req RefreshTokenRequest
+	var req api.RefreshTokenRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		http.Error(w, "Invalid request body", http.StatusBadRequest)
 		return
@@ -165,12 +143,14 @@ func (c *UserController) RefreshToken(w http.ResponseWriter, r *http.Request, _ 
 		return
 	}
 
-	response := AuthResponse{
-		AccessToken:  accessToken,
-		RefreshToken: refreshToken,
-		UserID:       user.ID,
-		Email:        user.Email,
-		Username:     user.Username,
+	userID := openapi_types.UUID(user.ID)
+	email := openapi_types.Email(user.Email)
+	response := api.AuthResponse{
+		AccessToken:  &accessToken,
+		RefreshToken: &refreshToken,
+		UserId:       &userID,
+		Email:        &email,
+		Username:     &user.Username,
 	}
 
 	w.Header().Set("Content-Type", "application/json")

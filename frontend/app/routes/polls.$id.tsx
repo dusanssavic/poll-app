@@ -3,7 +3,7 @@ import { useParams, Link, useNavigate } from "react-router";
 import type { Route } from "./+types/polls.$id";
 import { apiClient } from "../lib/api/client";
 import { useAuth } from "../lib/contexts/auth";
-import type { PollResponse, VoteCountsResponse, VotersResponse } from "../lib/api/client";
+import type { PollResponse, UserInfo } from "../lib/api/client";
 import { Navigation } from "../components/Navigation";
 
 export function meta({}: Route.MetaArgs) {
@@ -18,9 +18,8 @@ export default function PollDetail() {
   const navigate = useNavigate();
   const { isAuthenticated, user } = useAuth();
   const [poll, setPoll] = useState<PollResponse | null>(null);
-  const [voteCounts, setVoteCounts] = useState<VoteCountsResponse | null>(null);
   const [selectedOption, setSelectedOption] = useState<string>("");
-  const [voters, setVoters] = useState<VotersResponse | null>(null);
+  const [selectedOptionForVoters, setSelectedOptionForVoters] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [voting, setVoting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -28,7 +27,6 @@ export default function PollDetail() {
   useEffect(() => {
     if (id) {
       loadPoll();
-      loadVoteCounts();
     }
   }, [id]);
 
@@ -43,15 +41,6 @@ export default function PollDetail() {
     }
   };
 
-  const loadVoteCounts = async () => {
-    try {
-      const data = await apiClient.getVoteCounts(id!);
-      setVoteCounts(data);
-    } catch (err: any) {
-      console.error("Failed to load vote counts:", err);
-    }
-  };
-
   const handleVote = async () => {
     if (!selectedOption || !isAuthenticated) {
       return;
@@ -62,7 +51,7 @@ export default function PollDetail() {
 
     try {
       await apiClient.voteOnPoll(id!, { option: selectedOption });
-      await loadVoteCounts();
+      await loadPoll();
       setSelectedOption("");
     } catch (err: any) {
       setError(err.response?.error || err.message || "Failed to vote");
@@ -71,16 +60,33 @@ export default function PollDetail() {
     }
   };
 
-  const handleVoteCountClick = async (option: string) => {
-    try {
-      const data = await apiClient.getVotersByOption(id!, option);
-      setVoters(data);
-    } catch (err: any) {
-      console.error("Failed to load voters:", err);
+  const handleVoteCountClick = (option: string) => {
+    if (poll?.voters_by_option?.[option]) {
+      setSelectedOptionForVoters(option);
+    } else {
+      setSelectedOptionForVoters(option);
     }
   };
 
   const isOwner = poll && isAuthenticated && user && poll.owner_id === user.user_id;
+
+  // Check if the current user has voted
+  const hasUserVoted = (): boolean => {
+    if (!poll || !user || !poll.voters_by_option) {
+      return false;
+    }
+    
+    // Check if user's ID appears in any of the voters_by_option arrays
+    for (const option in poll.voters_by_option) {
+      const voters = poll.voters_by_option[option];
+      if (voters.some((voter: UserInfo) => voter.id === user.user_id)) {
+        return true;
+      }
+    }
+    return false;
+  };
+
+  const userHasVoted = hasUserVoted();
 
   if (loading) {
     return (
@@ -110,8 +116,8 @@ export default function PollDetail() {
     return null;
   }
 
-  const totalVotes = voteCounts?.counts
-    ? Object.values(voteCounts.counts).reduce((sum: number, count: number) => sum + count, 0)
+  const totalVotes = poll?.vote_counts
+    ? Object.values(poll.vote_counts).reduce((sum: number, count: number) => sum + count, 0)
     : 0;
 
   return (
@@ -168,7 +174,7 @@ export default function PollDetail() {
             </div>
           )}
 
-          {isAuthenticated && (
+          {isAuthenticated && !userHasVoted && (
             <div className="mb-6">
               <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
                 Cast your vote
@@ -218,64 +224,66 @@ export default function PollDetail() {
             </div>
           )}
 
-          <div className="mt-6">
-            <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-              Results ({totalVotes} {totalVotes === 1 ? "vote" : "votes"})
-            </h2>
-            <div className="space-y-2">
-              {poll.options?.map((option: string) => {
-                const count = voteCounts?.counts?.[option] || 0;
-                const percentage =
-                  totalVotes > 0 ? Math.round((count / totalVotes) * 100) : 0;
+          {userHasVoted && (
+            <div className="mt-6">
+              <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+                Results ({totalVotes} {totalVotes === 1 ? "vote" : "votes"})
+              </h2>
+              <div className="space-y-2">
+                {poll.options?.map((option: string) => {
+                  const count = poll?.vote_counts?.[option] || 0;
+                  const percentage =
+                    totalVotes > 0 ? Math.round((count / totalVotes) * 100) : 0;
 
-                return (
-                  <div key={option} className="relative">
-                    <button
-                      onClick={() => handleVoteCountClick(option)}
-                      className="w-full text-left p-3 border border-gray-300 dark:border-gray-700 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
-                    >
-                      <div className="flex items-center justify-between mb-1">
-                        <span className="text-gray-900 dark:text-white font-medium">
-                          {option}
-                        </span>
-                        <span className="text-gray-600 dark:text-gray-400 text-sm">
-                          {count} ({percentage}%)
-                        </span>
-                      </div>
-                      <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
-                        <div
-                          className="bg-blue-600 h-2 rounded-full transition-all"
-                          style={{ width: `${percentage}%` }}
-                        />
-                      </div>
-                    </button>
-                  </div>
-                );
-              })}
+                  return (
+                    <div key={option} className="relative">
+                      <button
+                        onClick={() => handleVoteCountClick(option)}
+                        className="w-full text-left p-3 border border-gray-300 dark:border-gray-700 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+                      >
+                        <div className="flex items-center justify-between mb-1">
+                          <span className="text-gray-900 dark:text-white font-medium">
+                            {option}
+                          </span>
+                          <span className="text-gray-600 dark:text-gray-400 text-sm">
+                            {count} ({percentage}%)
+                          </span>
+                        </div>
+                        <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
+                          <div
+                            className="bg-blue-600 h-2 rounded-full transition-all"
+                            style={{ width: `${percentage}%` }}
+                          />
+                        </div>
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
             </div>
-          </div>
+          )}
         </div>
 
-        {voters && (
+        {selectedOptionForVoters !== null && (
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-                Voters for "{voters.option}"
+                Voters for "{selectedOptionForVoters}"
               </h3>
               <button
-                onClick={() => setVoters(null)}
+                onClick={() => setSelectedOptionForVoters(null)}
                 className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
               >
                 ✕
               </button>
             </div>
             <div className="space-y-2">
-              {!voters.voters || voters.voters.length === 0 ? (
+              {!poll?.voters_by_option?.[selectedOptionForVoters] || poll.voters_by_option[selectedOptionForVoters].length === 0 ? (
                 <p className="text-gray-500 dark:text-gray-400">
                   No voters yet
                 </p>
               ) : (
-                voters.voters.map((voter: import("../lib/api/client").UserInfo) => (
+                poll.voters_by_option[selectedOptionForVoters].map((voter: UserInfo) => (
                   <div
                     key={voter.id}
                     className="p-2 border border-gray-200 dark:border-gray-700 rounded"

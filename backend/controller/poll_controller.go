@@ -4,8 +4,9 @@ import (
 	"encoding/json"
 	"net/http"
 
+	"poll-app/api"
 	"poll-app/auth"
-	"poll-app/ent"
+	"poll-app/converter"
 	"poll-app/service"
 
 	"github.com/google/uuid"
@@ -22,31 +23,6 @@ func NewPollController(service service.PollService) *PollController {
 	return &PollController{service: service}
 }
 
-// CreatePollRequest represents the request body for creating a poll
-type CreatePollRequest struct {
-	Title       string   `json:"title"`
-	Description string   `json:"description"`
-	Options     []string `json:"options"`
-}
-
-// UpdatePollRequest represents the request body for updating a poll
-type UpdatePollRequest struct {
-	Title       string   `json:"title"`
-	Description string   `json:"description"`
-	Options     []string `json:"options"`
-}
-
-// PollResponse represents a poll in API responses
-type PollResponse struct {
-	ID          uuid.UUID `json:"id"`
-	Title       string    `json:"title"`
-	Description string    `json:"description"`
-	Options     []string  `json:"options"`
-	OwnerID     uuid.UUID `json:"owner_id"`
-	CreatedAt   string    `json:"created_at"`
-	UpdatedAt   string    `json:"updated_at"`
-}
-
 // ListPolls handles GET /api/polls
 func (c *PollController) ListPolls(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 	polls, err := c.service.ListPolls(r.Context())
@@ -55,9 +31,9 @@ func (c *PollController) ListPolls(w http.ResponseWriter, r *http.Request, _ htt
 		return
 	}
 
-	responses := make([]PollResponse, 0, len(polls))
+	responses := make([]api.PollResponse, 0, len(polls))
 	for _, poll := range polls {
-		responses = append(responses, pollToResponse(poll))
+		responses = append(responses, converter.PollToResponse(poll))
 	}
 
 	w.Header().Set("Content-Type", "application/json")
@@ -79,7 +55,7 @@ func (c *PollController) GetPoll(w http.ResponseWriter, r *http.Request, ps http
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(pollToResponse(poll))
+	json.NewEncoder(w).Encode(converter.PollToResponse(poll))
 }
 
 // CreatePoll handles POST /api/polls
@@ -90,13 +66,18 @@ func (c *PollController) CreatePoll(w http.ResponseWriter, r *http.Request, _ ht
 		return
 	}
 
-	var req CreatePollRequest
+	var req api.CreatePollRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		http.Error(w, "Invalid request body", http.StatusBadRequest)
 		return
 	}
 
-	poll, err := c.service.CreatePoll(r.Context(), req.Title, req.Description, req.Options, userID)
+	description := ""
+	if req.Description != nil {
+		description = *req.Description
+	}
+
+	poll, err := c.service.CreatePoll(r.Context(), req.Title, description, req.Options, userID)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
@@ -104,7 +85,7 @@ func (c *PollController) CreatePoll(w http.ResponseWriter, r *http.Request, _ ht
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
-	json.NewEncoder(w).Encode(pollToResponse(poll))
+	json.NewEncoder(w).Encode(converter.PollToResponse(poll))
 }
 
 // UpdatePoll handles PUT /api/polls/:id
@@ -121,20 +102,33 @@ func (c *PollController) UpdatePoll(w http.ResponseWriter, r *http.Request, ps h
 		return
 	}
 
-	var req UpdatePollRequest
+	var req api.UpdatePollRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		http.Error(w, "Invalid request body", http.StatusBadRequest)
 		return
 	}
 
-	poll, err := c.service.UpdatePoll(r.Context(), id, userID, req.Title, req.Description, req.Options)
+	title := ""
+	if req.Title != nil {
+		title = *req.Title
+	}
+	description := ""
+	if req.Description != nil {
+		description = *req.Description
+	}
+	options := []string{}
+	if req.Options != nil {
+		options = *req.Options
+	}
+
+	poll, err := c.service.UpdatePoll(r.Context(), id, userID, title, description, options)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(pollToResponse(poll))
+	json.NewEncoder(w).Encode(converter.PollToResponse(poll))
 }
 
 // DeletePoll handles DELETE /api/polls/:id
@@ -159,15 +153,3 @@ func (c *PollController) DeletePoll(w http.ResponseWriter, r *http.Request, ps h
 	w.WriteHeader(http.StatusNoContent)
 }
 
-// Helper function to convert ent.Poll to PollResponse
-func pollToResponse(poll *ent.Poll) PollResponse {
-	return PollResponse{
-		ID:          poll.ID,
-		Title:       poll.Title,
-		Description: poll.Description,
-		Options:     poll.Options,
-		OwnerID:     poll.OwnerID,
-		CreatedAt:   poll.CreatedAt.Format("2006-01-02T15:04:05Z07:00"),
-		UpdatedAt:   poll.UpdatedAt.Format("2006-01-02T15:04:05Z07:00"),
-	}
-}

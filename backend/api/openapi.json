@@ -724,6 +724,50 @@
             "type": "string",
             "format": "date-time",
             "example": "2024-01-15T10:30:00Z"
+          },
+          "vote_counts": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "description": "Map of option to vote count (only included in poll details endpoint)",
+            "example": {
+              "Go": 10,
+              "JavaScript": 25,
+              "Python": 15,
+              "Rust": 5
+            }
+          },
+          "voters_by_option": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "array",
+              "items": {
+                "$ref": "#/components/schemas/UserInfo"
+              }
+            },
+            "description": "Map of option to list of voters (only included in poll details endpoint)",
+            "example": {
+              "Go": [
+                {
+                  "id": "123e4567-e89b-12d3-a456-426614174000",
+                  "email": "user1@example.com",
+                  "username": "user1"
+                },
+                {
+                  "id": "223e4567-e89b-12d3-a456-426614174001",
+                  "email": "user2@example.com",
+                  "username": "user2"
+                }
+              ],
+              "JavaScript": [
+                {
+                  "id": "323e4567-e89b-12d3-a456-426614174002",
+                  "email": "user3@example.com",
+                  "username": "user3"
+                }
+              ]
+            }
           }
         }
       },

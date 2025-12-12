@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"log"
 	"net/http"
-	"time"
 
 	"poll-app/auth"
 	"poll-app/controller"
@@ -120,7 +119,7 @@ func corsMiddleware(next http.Handler) http.Handler {
 
 func healthCheck(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 	w.WriteHeader(http.StatusOK)
-	if _, err := w.Write([]byte("Hot Reloading Verified! ✅ Changed at " + time.Now().Format("15:04:05"))); err != nil {
+	if _, err := w.Write([]byte("We are Up!")); err != nil {
 		log.Printf("Failed to write health check response: %v", err)
 	}
 }
