@@ -153,6 +153,14 @@ export class ApiClient {
     }
   }
 
+  async deleteVote(id: string): Promise<void> {
+    try {
+      return await VotesService.deleteVote(id);
+    } catch (error: any) {
+      throw this.handleError(error);
+    }
+  }
+
   private setTokens(accessToken: string, refreshToken: string): void {
     if (typeof window === "undefined") return;
     localStorage.setItem("access_token", accessToken);

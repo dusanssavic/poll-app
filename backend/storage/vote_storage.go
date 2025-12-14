@@ -16,6 +16,8 @@ type VoteStorage interface {
 	GetVotesByPoll(ctx context.Context, pollID uuid.UUID) ([]*ent.Vote, error)
 	GetVotesByPollAndOption(ctx context.Context, pollID uuid.UUID, option string) ([]*ent.Vote, error)
 	GetVoteCountsByPoll(ctx context.Context, pollID uuid.UUID) (map[string]int, error)
+	DeleteVoteByUserAndPoll(ctx context.Context, userID, pollID uuid.UUID) error
+	DeleteVotesByPollAndOptions(ctx context.Context, pollID uuid.UUID, options []string) error
 }
 
 func (s *storage) CreateVote(ctx context.Context, userID, pollID uuid.UUID, option string) (*ent.Vote, error) {
@@ -73,3 +75,28 @@ func (s *storage) GetVoteCountsByPoll(ctx context.Context, pollID uuid.UUID) (ma
 	return counts, nil
 }
 
+func (s *storage) DeleteVoteByUserAndPoll(ctx context.Context, userID, pollID uuid.UUID) error {
+	_, err := s.client.Vote.
+		Delete().
+		Where(
+			vote.UserID(userID),
+			vote.PollID(pollID),
+		).
+		Exec(ctx)
+	return err
+}
+
+func (s *storage) DeleteVotesByPollAndOptions(ctx context.Context, pollID uuid.UUID, options []string) error {
+	if len(options) == 0 {
+		return nil
+	}
+
+	_, err := s.client.Vote.
+		Delete().
+		Where(
+			vote.PollID(pollID),
+			vote.OptionIn(options...),
+		).
+		Exec(ctx)
+	return err
+}

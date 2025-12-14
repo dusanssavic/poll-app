@@ -130,3 +130,32 @@ func (c *VoteController) GetVotersByOption(w http.ResponseWriter, r *http.Reques
 	json.NewEncoder(w).Encode(response)
 }
 
+// DeleteVote handles DELETE /api/polls/:id/vote
+func (c *VoteController) DeleteVote(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+	userID, ok := auth.GetUserIDFromContext(r.Context())
+	if !ok {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	pollID, err := uuid.Parse(ps.ByName("id"))
+	if err != nil {
+		http.Error(w, "Invalid poll ID", http.StatusBadRequest)
+		return
+	}
+
+	if err := c.service.DeleteVote(r.Context(), userID, pollID); err != nil {
+		if err.Error() == "poll not found" || err.Error() == "vote not found" {
+			http.Error(w, err.Error(), http.StatusNotFound)
+			return
+		}
+		if err.Error() == "unauthorized: can only delete your own vote" {
+			http.Error(w, err.Error(), http.StatusForbidden)
+			return
+		}
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusNoContent)
+}

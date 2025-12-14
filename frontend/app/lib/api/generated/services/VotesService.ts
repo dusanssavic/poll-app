@@ -37,6 +37,29 @@ export class VotesService {
         });
     }
     /**
+     * Delete a vote
+     * Delete the current user's vote on a poll (requires authentication)
+     * @param id Poll ID
+     * @returns void
+     * @throws ApiError
+     */
+    public static deleteVote(
+        id: string,
+    ): CancelablePromise<void> {
+        return __request(OpenAPI, {
+            method: 'DELETE',
+            url: '/api/polls/{id}/vote',
+            path: {
+                'id': id,
+            },
+            errors: {
+                401: `Unauthorized`,
+                403: `Forbidden - can only delete your own vote`,
+                404: `Poll or vote not found`,
+            },
+        });
+    }
+    /**
      * Get vote counts
      * Get vote counts for all options in a poll
      * @param id Poll ID

@@ -85,9 +85,10 @@ func runServer(cmd *cobra.Command, args []string) error {
 	router.DELETE("/api/polls/:id", authMiddleware(pollController.DeletePoll)) // Protected
 
 	// Vote routes
-	router.POST("/api/polls/:id/vote", authMiddleware(voteController.VoteOnPoll)) // Protected
-	router.GET("/api/polls/:id/votes", voteController.GetVoteCounts)              // Public
-	router.GET("/api/polls/:id/votes/:option", voteController.GetVotersByOption)  // Public
+	router.POST("/api/polls/:id/vote", authMiddleware(voteController.VoteOnPoll))   // Protected
+	router.DELETE("/api/polls/:id/vote", authMiddleware(voteController.DeleteVote)) // Protected
+	router.GET("/api/polls/:id/votes", voteController.GetVoteCounts)                // Public
+	router.GET("/api/polls/:id/votes/:option", voteController.GetVotersByOption)    // Public
 
 	// Wrap router with CORS middleware
 	handler := corsMiddleware(router)

@@ -22,6 +22,7 @@ export default function PollDetail() {
   const [selectedOptionForVoters, setSelectedOptionForVoters] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [voting, setVoting] = useState(false);
+  const [reverting, setReverting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -61,11 +62,7 @@ export default function PollDetail() {
   };
 
   const handleVoteCountClick = (option: string) => {
-    if (poll?.voters_by_option?.[option]) {
-      setSelectedOptionForVoters(option);
-    } else {
-      setSelectedOptionForVoters(option);
-    }
+    setSelectedOptionForVoters(option);
   };
 
   const isOwner = poll && isAuthenticated && user && poll.owner_id === user.user_id;
@@ -78,6 +75,7 @@ export default function PollDetail() {
     
     // Check if user's ID appears in any of the voters_by_option arrays
     for (const option in poll.voters_by_option) {
+      console.log(option, user.user_id);
       const voters = poll.voters_by_option[option];
       if (voters.some((voter: UserInfo) => voter.id === user.user_id)) {
         return true;
@@ -86,7 +84,42 @@ export default function PollDetail() {
     return false;
   };
 
+  // Get the option the user voted for
+  const getUserVotedOption = (): string | null => {
+    if (!poll || !user || !poll.voters_by_option) {
+      return null;
+    }
+    
+    for (const option in poll.voters_by_option) {
+      const voters = poll.voters_by_option[option];
+      if (voters.some((voter: UserInfo) => voter.id === user.user_id)) {
+        return option;
+      }
+    }
+    return null;
+  };
+
+  const handleRevertVote = async () => {
+    if (!isAuthenticated || !id) {
+      return;
+    }
+
+    setReverting(true);
+    setError(null);
+
+    try {
+      await apiClient.deleteVote(id);
+      await loadPoll();
+      setSelectedOption("");
+    } catch (err: any) {
+      setError(err.response?.error || err.message || "Failed to revert vote");
+    } finally {
+      setReverting(false);
+    }
+  };
+
   const userHasVoted = hasUserVoted();
+  const userVotedOption = getUserVotedOption();
 
   if (loading) {
     return (
@@ -177,7 +210,7 @@ export default function PollDetail() {
           {isAuthenticated && !userHasVoted && (
             <div className="mb-6">
               <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-                Cast your vote
+                Cast your votes
               </h2>
               <div className="space-y-2">
                 {poll.options?.map((option: string) => (
@@ -209,7 +242,7 @@ export default function PollDetail() {
             </div>
           )}
 
-          {!isAuthenticated && (
+          {!isAuthenticated && !userHasVoted && (
             <div className="mb-6 p-4 bg-yellow-50 dark:bg-yellow-900/20 rounded-md">
               <p className="text-sm text-yellow-800 dark:text-yellow-200">
                 Please{" "}
@@ -226,24 +259,43 @@ export default function PollDetail() {
 
           {userHasVoted && (
             <div className="mt-6">
-              <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-                Results ({totalVotes} {totalVotes === 1 ? "vote" : "votes"})
-              </h2>
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
+                  Results ({totalVotes} {totalVotes === 1 ? "vote" : "votes"})
+                </h2>
+                <button
+                  onClick={handleRevertVote}
+                  disabled={reverting}
+                  className="px-4 py-2 text-sm bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-white rounded-md hover:bg-gray-300 dark:hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {reverting ? "Reverting..." : "Change Vote"}
+                </button>
+              </div>
               <div className="space-y-2">
                 {poll.options?.map((option: string) => {
                   const count = poll?.vote_counts?.[option] || 0;
                   const percentage =
                     totalVotes > 0 ? Math.round((count / totalVotes) * 100) : 0;
+                  const isUserVotedOption = option === userVotedOption;
 
                   return (
                     <div key={option} className="relative">
                       <button
                         onClick={() => handleVoteCountClick(option)}
-                        className="w-full text-left p-3 border border-gray-300 dark:border-gray-700 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+                        className={`w-full text-left p-3 border rounded-md hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors ${
+                          isUserVotedOption
+                            ? "border-green-500 dark:border-green-400 border-2"
+                            : "border-gray-300 dark:border-gray-700"
+                        }`}
                       >
                         <div className="flex items-center justify-between mb-1">
                           <span className="text-gray-900 dark:text-white font-medium">
                             {option}
+                            {isUserVotedOption && (
+                              <span className="ml-2 text-xs text-green-600 dark:text-green-400">
+                                (Your vote)
+                              </span>
+                            )}
                           </span>
                           <span className="text-gray-600 dark:text-gray-400 text-sm">
                             {count} ({percentage}%)

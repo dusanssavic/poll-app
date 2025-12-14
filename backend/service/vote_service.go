@@ -14,6 +14,7 @@ type VoteService interface {
 	VoteOnPoll(ctx context.Context, userID, pollID uuid.UUID, option string) (*ent.Vote, error)
 	GetVoteCounts(ctx context.Context, pollID uuid.UUID) (map[string]int, error)
 	GetVotersByOption(ctx context.Context, pollID uuid.UUID, option string) ([]*ent.User, error)
+	DeleteVote(ctx context.Context, userID, pollID uuid.UUID) error
 }
 
 func (s *service) VoteOnPoll(ctx context.Context, userID, pollID uuid.UUID, option string) (*ent.Vote, error) {
@@ -42,7 +43,22 @@ func (s *service) VoteOnPoll(ctx context.Context, userID, pollID uuid.UUID, opti
 	// Check if user already voted
 	existingVote, err := s.storage.GetVoteByUserAndPoll(ctx, userID, pollID)
 	if err == nil && existingVote != nil {
-		return nil, errors.New("user has already voted on this poll")
+		// Check if existing vote is for a valid option
+		validExistingOption := false
+		for _, opt := range poll.Options {
+			if opt == existingVote.Option {
+				validExistingOption = true
+				break
+			}
+		}
+		// If existing vote is for an invalid/deleted option, delete it and allow re-voting
+		if !validExistingOption {
+			if err := s.storage.DeleteVoteByUserAndPoll(ctx, userID, pollID); err != nil {
+				return nil, err
+			}
+		} else {
+			return nil, errors.New("user has already voted on this poll")
+		}
 	}
 
 	// Create vote
@@ -93,4 +109,25 @@ func (s *service) GetVotersByOption(ctx context.Context, pollID uuid.UUID, optio
 	}
 
 	return users, nil
+}
+
+func (s *service) DeleteVote(ctx context.Context, userID, pollID uuid.UUID) error {
+	// Validate poll exists
+	_, err := s.storage.GetPollByID(ctx, pollID)
+	if err != nil {
+		return errors.New("poll not found")
+	}
+
+	// Check if vote exists
+	existingVote, err := s.storage.GetVoteByUserAndPoll(ctx, userID, pollID)
+	if err != nil {
+		return errors.New("vote not found")
+	}
+
+	// User can only delete their own vote
+	if existingVote.UserID != userID {
+		return errors.New("unauthorized: can only delete your own vote")
+	}
+
+	return s.storage.DeleteVoteByUserAndPoll(ctx, userID, pollID)
 }

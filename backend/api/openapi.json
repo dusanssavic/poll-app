@@ -458,6 +458,60 @@
             }
           }
         }
+      },
+      "delete": {
+        "tags": ["votes"],
+        "summary": "Delete a vote",
+        "description": "Delete the current user's vote on a poll (requires authentication)",
+        "operationId": "deleteVote",
+        "security": [{"bearerAuth": []}],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "Poll ID"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Vote deleted successfully"
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden - can only delete your own vote",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Poll or vote not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
       }
     },
     "/api/polls/{id}/votes": {

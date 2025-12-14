@@ -59,6 +59,42 @@ func (s *service) UpdatePoll(ctx context.Context, pollID, ownerID uuid.UUID, tit
 		return nil, errors.New("poll must have at least 2 options")
 	}
 
+	// If options are being updated, identify and clean up votes for removed options
+	if len(options) > 0 {
+		// Get current poll to compare options
+		currentPoll, err := s.storage.GetPollByID(ctx, pollID)
+		if err != nil {
+			return nil, err
+		}
+
+		// Find removed options
+		oldOptionsMap := make(map[string]bool)
+		for _, opt := range currentPoll.Options {
+			oldOptionsMap[opt] = true
+		}
+
+		var removedOptions []string
+		for _, oldOpt := range currentPoll.Options {
+			found := false
+			for _, newOpt := range options {
+				if oldOpt == newOpt {
+					found = true
+					break
+				}
+			}
+			if !found {
+				removedOptions = append(removedOptions, oldOpt)
+			}
+		}
+
+		// Delete votes for removed options
+		if len(removedOptions) > 0 {
+			if err := s.storage.DeleteVotesByPollAndOptions(ctx, pollID, removedOptions); err != nil {
+				return nil, err
+			}
+		}
+	}
+
 	return s.storage.UpdatePoll(ctx, pollID, title, description, options)
 }
 
