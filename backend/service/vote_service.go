@@ -40,6 +40,7 @@ func (s *service) VoteOnPoll(ctx context.Context, userID, pollID uuid.UUID, opti
 		return nil, errors.New("invalid option for this poll")
 	}
 
+	// Permission check: User can only vote once per poll (enforced by checking existing vote)
 	// Check if user already voted
 	existingVote, err := s.storage.GetVoteByUserAndPoll(ctx, userID, pollID)
 	if err == nil && existingVote != nil {
@@ -124,7 +125,7 @@ func (s *service) DeleteVote(ctx context.Context, userID, pollID uuid.UUID) erro
 		return errors.New("vote not found")
 	}
 
-	// User can only delete their own vote
+	// Permission check: User can only delete their own vote
 	if existingVote.UserID != userID {
 		return errors.New("unauthorized: can only delete your own vote")
 	}

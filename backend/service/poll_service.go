@@ -45,7 +45,7 @@ func (s *service) ListPolls(ctx context.Context) ([]*ent.Poll, error) {
 }
 
 func (s *service) UpdatePoll(ctx context.Context, pollID, ownerID uuid.UUID, title, description string, options []string) (*ent.Poll, error) {
-	// Check ownership
+	// Permission check: Only poll owner can update the poll
 	isOwner, err := s.IsPollOwner(ctx, pollID, ownerID)
 	if err != nil {
 		return nil, err
@@ -99,7 +99,7 @@ func (s *service) UpdatePoll(ctx context.Context, pollID, ownerID uuid.UUID, tit
 }
 
 func (s *service) DeletePoll(ctx context.Context, pollID, ownerID uuid.UUID) error {
-	// Check ownership
+	// Permission check: Only poll owner can delete the poll
 	isOwner, err := s.IsPollOwner(ctx, pollID, ownerID)
 	if err != nil {
 		return err

@@ -1,8 +1,9 @@
-import { createContext, useContext, useEffect, useState } from "react";
+import { createContext, useContext, useEffect, useState, useCallback } from "react";
 import type { ReactNode } from "react";
 import { useNavigate } from "react-router";
 import { apiClient } from "../api/client";
 import type { AuthResponse, LoginRequest, CreateUserRequest } from "../api/client";
+import { decodeToken, isTokenExpired, isTokenValid } from "../utils/jwt";
 
 interface AuthContextType {
   user: AuthResponse | null;
@@ -10,6 +11,7 @@ interface AuthContextType {
   login: (data: LoginRequest) => Promise<void>;
   signup: (data: CreateUserRequest) => Promise<void>;
   logout: () => void;
+  refreshToken: () => Promise<boolean>;
   loading: boolean;
 }
 
@@ -20,22 +22,58 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
 
-  useEffect(() => {
-    // Check if user is already authenticated
-    const token = localStorage.getItem("access_token");
-    if (token && apiClient.isAuthenticated()) {
-      // Optionally validate token or fetch user info
-      // For now, we'll just set authenticated state
-      setUser({
-        access_token: token,
-        refresh_token: localStorage.getItem("refresh_token") || "",
-        user_id: "",
-        email: "",
-        username: "",
-      });
+  // Restore user state from token on mount
+  const restoreUserFromToken = useCallback(async (): Promise<void> => {
+    const accessToken = localStorage.getItem("access_token");
+    const refreshToken = localStorage.getItem("refresh_token");
+
+    if (!accessToken) {
+      setLoading(false);
+      return;
     }
+
+    // Check if access token is valid
+    if (isTokenValid(accessToken)) {
+      // Decode token to extract user info
+      const payload = decodeToken(accessToken);
+      if (payload && payload.user_id && payload.email && payload.username) {
+        setUser({
+          access_token: accessToken,
+          refresh_token: refreshToken || "",
+          user_id: payload.user_id,
+          email: payload.email,
+          username: payload.username,
+        });
+        setLoading(false);
+        return;
+      }
+    }
+
+    // If access token is expired but refresh token exists, try to refresh
+    if (isTokenExpired(accessToken) && refreshToken) {
+      try {
+        const response = await apiClient.refreshToken({ refresh_token: refreshToken });
+        if (response.access_token && response.refresh_token) {
+          setUser(response);
+          setLoading(false);
+          return;
+        }
+      } catch (error) {
+        // Refresh failed, clear tokens
+        apiClient.logout();
+        setLoading(false);
+        return;
+      }
+    }
+
+    // Token is invalid and refresh failed or doesn't exist
+    apiClient.logout();
     setLoading(false);
   }, []);
+
+  useEffect(() => {
+    restoreUserFromToken();
+  }, [restoreUserFromToken]);
 
   const login = async (data: LoginRequest) => {
     try {
@@ -57,11 +95,31 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const logout = () => {
+  const logout = useCallback(() => {
     apiClient.logout();
     setUser(null);
     navigate("/login");
-  };
+  }, [navigate]);
+
+  const refreshToken = useCallback(async (): Promise<boolean> => {
+    const refreshTokenValue = localStorage.getItem("refresh_token");
+    if (!refreshTokenValue) {
+      return false;
+    }
+
+    try {
+      const response = await apiClient.refreshToken({ refresh_token: refreshTokenValue });
+      if (response.access_token && response.refresh_token) {
+        setUser(response);
+        return true;
+      }
+      return false;
+    } catch (error) {
+      // Refresh failed, logout user
+      logout();
+      return false;
+    }
+  }, [logout]);
 
   return (
     <AuthContext.Provider
@@ -71,6 +129,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         login,
         signup,
         logout,
+        refreshToken,
         loading,
       }}
     >

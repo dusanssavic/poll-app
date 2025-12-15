@@ -1,5 +1,6 @@
 // API Client wrapper using generated OpenAPI client
 import { OpenAPI } from "./generated/core/OpenAPI";
+import { ApiError as GeneratedApiError } from "./generated/core/ApiError";
 import {
   UsersService,
   PollsService,
@@ -26,6 +27,82 @@ OpenAPI.TOKEN = async () => {
   if (typeof window === "undefined") return "";
   return localStorage.getItem("access_token") || "";
 };
+
+// Token refresh state management
+let isRefreshing = false;
+let refreshPromise: Promise<AuthResponse | null> | null = null;
+
+/**
+ * Attempts to refresh the access token using the refresh token
+ */
+async function attemptTokenRefresh(): Promise<AuthResponse | null> {
+  if (isRefreshing && refreshPromise) {
+    return refreshPromise;
+  }
+
+  isRefreshing = true;
+  refreshPromise = (async () => {
+    try {
+      const refreshToken = localStorage.getItem("refresh_token");
+      if (!refreshToken) {
+        return null;
+      }
+
+      const response = await UsersService.refreshToken({
+        refresh_token: refreshToken,
+      });
+
+      if (response.access_token && response.refresh_token) {
+        localStorage.setItem("access_token", response.access_token);
+        localStorage.setItem("refresh_token", response.refresh_token);
+        return response;
+      }
+      return null;
+    } catch (error) {
+      // Refresh failed, clear tokens
+      localStorage.removeItem("access_token");
+      localStorage.removeItem("refresh_token");
+      return null;
+    } finally {
+      isRefreshing = false;
+      refreshPromise = null;
+    }
+  })();
+
+  return refreshPromise;
+}
+
+/**
+ * Wraps an API call to handle 401 errors by refreshing the token and retrying
+ */
+async function withTokenRefresh<T>(
+  apiCall: () => Promise<T>,
+  retries = 1
+): Promise<T> {
+  try {
+    return await apiCall();
+  } catch (error: any) {
+    // Check if it's a 401 error (from ApiError or regular error) and we haven't exhausted retries
+    const is401 = 
+      (error instanceof GeneratedApiError && error.status === 401) ||
+      (error.status === 401);
+    
+    if (is401 && retries > 0) {
+      const refreshResponse = await attemptTokenRefresh();
+      if (refreshResponse) {
+        // Retry the original call with new token
+        return withTokenRefresh(apiCall, retries - 1);
+      } else {
+        // Refresh failed, redirect to login
+        if (typeof window !== "undefined") {
+          window.location.href = "/login";
+        }
+        throw error;
+      }
+    }
+    throw error;
+  }
+}
 
 export class ApiError extends Error {
   constructor(
@@ -90,7 +167,7 @@ export class ApiClient {
   // Poll APIs
   async listPolls(): Promise<PollResponse[]> {
     try {
-      return await PollsService.listPolls();
+      return await withTokenRefresh(() => PollsService.listPolls());
     } catch (error: any) {
       throw this.handleError(error);
     }
@@ -98,7 +175,7 @@ export class ApiClient {
 
   async getPoll(id: string): Promise<PollResponse> {
     try {
-      return await PollsService.getPoll(id);
+      return await withTokenRefresh(() => PollsService.getPoll(id));
     } catch (error: any) {
       throw this.handleError(error);
     }
@@ -106,7 +183,7 @@ export class ApiClient {
 
   async createPoll(data: CreatePollRequest): Promise<PollResponse> {
     try {
-      return await PollsService.createPoll(data);
+      return await withTokenRefresh(() => PollsService.createPoll(data));
     } catch (error: any) {
       throw this.handleError(error);
     }
@@ -114,7 +191,7 @@ export class ApiClient {
 
   async updatePoll(id: string, data: UpdatePollRequest): Promise<PollResponse> {
     try {
-      return await PollsService.updatePoll(id, data);
+      return await withTokenRefresh(() => PollsService.updatePoll(id, data));
     } catch (error: any) {
       throw this.handleError(error);
     }
@@ -122,7 +199,7 @@ export class ApiClient {
 
   async deletePoll(id: string): Promise<void> {
     try {
-      return await PollsService.deletePoll(id);
+      return await withTokenRefresh(() => PollsService.deletePoll(id));
     } catch (error: any) {
       throw this.handleError(error);
     }
@@ -131,7 +208,7 @@ export class ApiClient {
   // Vote APIs
   async voteOnPoll(id: string, data: VoteRequest): Promise<VoteResponse> {
     try {
-      return await VotesService.voteOnPoll(id, data);
+      return await withTokenRefresh(() => VotesService.voteOnPoll(id, data));
     } catch (error: any) {
       throw this.handleError(error);
     }
@@ -139,7 +216,7 @@ export class ApiClient {
 
   async getVoteCounts(id: string): Promise<VoteCountsResponse> {
     try {
-      return await VotesService.getVoteCounts(id);
+      return await withTokenRefresh(() => VotesService.getVoteCounts(id));
     } catch (error: any) {
       throw this.handleError(error);
     }
@@ -147,7 +224,7 @@ export class ApiClient {
 
   async getVotersByOption(id: string, option: string): Promise<VotersResponse> {
     try {
-      return await VotesService.getVotersByOption(id, option);
+      return await withTokenRefresh(() => VotesService.getVotersByOption(id, option));
     } catch (error: any) {
       throw this.handleError(error);
     }
@@ -155,7 +232,7 @@ export class ApiClient {
 
   async deleteVote(id: string): Promise<void> {
     try {
-      return await VotesService.deleteVote(id);
+      return await withTokenRefresh(() => VotesService.deleteVote(id));
     } catch (error: any) {
       throw this.handleError(error);
     }
