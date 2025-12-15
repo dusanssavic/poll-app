@@ -153,10 +153,22 @@ export class ApiClient {
     }
   }
 
-  logout(): void {
+  async logout(): Promise<void> {
     if (typeof window === "undefined") return;
-    localStorage.removeItem("access_token");
-    localStorage.removeItem("refresh_token");
+    
+    try {
+      // Call the logout endpoint to revoke tokens on the server
+      // Use withTokenRefresh to handle token refresh if needed
+      await withTokenRefresh(() => UsersService.logout());
+    } catch (error: any) {
+      // Even if the API call fails, we should still clear local tokens
+      // This ensures the user is logged out locally even if the server call fails
+      console.error("Logout API call failed:", error);
+    } finally {
+      // Always clear local storage regardless of API call success/failure
+      localStorage.removeItem("access_token");
+      localStorage.removeItem("refresh_token");
+    }
   }
 
   isAuthenticated(): boolean {

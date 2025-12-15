@@ -47,7 +47,7 @@ func (c *UserController) CreateUser(w http.ResponseWriter, r *http.Request, _ ht
 		return
 	}
 
-	refreshToken, err := c.jwtManager.GenerateRefreshToken(user.ID)
+	refreshToken, _, err := c.jwtManager.GenerateRefreshToken(r.Context(), user.ID)
 	if err != nil {
 		http.Error(w, "Failed to generate refresh token", http.StatusInternalServerError)
 		return
@@ -89,7 +89,7 @@ func (c *UserController) Login(w http.ResponseWriter, r *http.Request, _ httprou
 		return
 	}
 
-	refreshToken, err := c.jwtManager.GenerateRefreshToken(user.ID)
+	refreshToken, _, err := c.jwtManager.GenerateRefreshToken(r.Context(), user.ID)
 	if err != nil {
 		http.Error(w, "Failed to generate refresh token", http.StatusInternalServerError)
 		return
@@ -117,29 +117,24 @@ func (c *UserController) RefreshToken(w http.ResponseWriter, r *http.Request, _ 
 		return
 	}
 
-	claims, err := c.jwtManager.ValidateRefreshToken(req.RefreshToken)
+	// Rotate refresh token (validates, revokes old, and generates new)
+	refreshToken, _, userUUID, err := c.jwtManager.RotateRefreshToken(r.Context(), req.RefreshToken)
 	if err != nil {
 		http.Error(w, "Invalid refresh token", http.StatusUnauthorized)
 		return
 	}
 
 	// Get user to get email and username
-	user, err := c.service.GetUserByID(r.Context(), claims.UserID)
+	user, err := c.service.GetUserByID(r.Context(), userUUID)
 	if err != nil {
 		http.Error(w, "User not found", http.StatusNotFound)
 		return
 	}
 
-	// Generate new tokens
+	// Generate new access token
 	accessToken, err := c.jwtManager.GenerateAccessToken(user.ID, user.Email, user.Username)
 	if err != nil {
 		http.Error(w, "Failed to generate access token", http.StatusInternalServerError)
-		return
-	}
-
-	refreshToken, err := c.jwtManager.GenerateRefreshToken(user.ID)
-	if err != nil {
-		http.Error(w, "Failed to generate refresh token", http.StatusInternalServerError)
 		return
 	}
 
@@ -155,4 +150,21 @@ func (c *UserController) RefreshToken(w http.ResponseWriter, r *http.Request, _ 
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(response)
+}
+
+// Logout handles POST /api/users/logout
+func (c *UserController) Logout(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
+	userID, ok := auth.GetUserIDFromContext(r.Context())
+	if !ok {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	// Revoke all refresh tokens for this user
+	if err := c.jwtManager.RevokeAllUserRefreshTokens(r.Context(), userID); err != nil {
+		http.Error(w, "Failed to logout", http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusNoContent)
 }

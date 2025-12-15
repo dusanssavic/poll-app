@@ -178,6 +178,40 @@
         }
       }
     },
+    "/api/users/logout": {
+      "post": {
+        "tags": ["users"],
+        "summary": "User logout",
+        "description": "Logout user and revoke all refresh tokens",
+        "operationId": "logout",
+        "security": [{"bearerAuth": []}],
+        "responses": {
+          "204": {
+            "description": "Logout successful"
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/polls": {
       "get": {
         "tags": ["polls"],

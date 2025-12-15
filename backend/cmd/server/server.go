@@ -76,6 +76,7 @@ func runServer(cmd *cobra.Command, args []string) error {
 	router.POST("/api/users", userController.CreateUser)
 	router.POST("/api/users/login", userController.Login)
 	router.POST("/api/users/refresh", userController.RefreshToken)
+	router.POST("/api/users/logout", authMiddleware(userController.Logout)) // Protected
 
 	// Poll routes
 	router.GET("/api/polls", pollController.ListPolls)                         // Public

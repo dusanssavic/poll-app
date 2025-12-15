@@ -10,7 +10,7 @@ interface AuthContextType {
   isAuthenticated: boolean;
   login: (data: LoginRequest) => Promise<void>;
   signup: (data: CreateUserRequest) => Promise<void>;
-  logout: () => void;
+  logout: () => Promise<void>;
   refreshToken: () => Promise<boolean>;
   loading: boolean;
 }
@@ -95,10 +95,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const logout = useCallback(() => {
-    apiClient.logout();
-    setUser(null);
-    navigate("/login");
+  const logout = useCallback(async () => {
+    try {
+      await apiClient.logout();
+    } catch (error) {
+      // Logout API call failed, but we'll still clear local state
+      console.error("Logout error:", error);
+    } finally {
+      // Always clear local state and redirect
+      setUser(null);
+      navigate("/login");
+    }
   }, [navigate]);
 
   const refreshToken = useCallback(async (): Promise<boolean> => {

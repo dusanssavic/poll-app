@@ -70,4 +70,20 @@ export class UsersService {
             },
         });
     }
+    /**
+     * User logout
+     * Logout user and revoke all refresh tokens
+     * @returns void
+     * @throws ApiError
+     */
+    public static logout(): CancelablePromise<void> {
+        return __request(OpenAPI, {
+            method: 'POST',
+            url: '/api/users/logout',
+            errors: {
+                401: `Unauthorized`,
+                500: `Internal server error`,
+            },
+        });
+    }
 }
