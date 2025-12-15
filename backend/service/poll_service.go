@@ -108,6 +108,11 @@ func (s *service) DeletePoll(ctx context.Context, pollID, ownerID uuid.UUID) err
 		return errors.New("only poll owner can delete the poll")
 	}
 
+	// Delete all votes associated with this poll first to avoid foreign key constraint violation
+	if err := s.storage.DeleteVotesByPoll(ctx, pollID); err != nil {
+		return err
+	}
+
 	return s.storage.DeletePoll(ctx, pollID)
 }
 

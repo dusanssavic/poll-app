@@ -107,7 +107,18 @@ export default function EditPoll() {
       await apiClient.deletePoll(id!);
       navigate("/");
     } catch (err: any) {
-      setError(err.response?.error || err.message || "Failed to delete poll");
+      // Extract error message from various error formats
+      let errorMessage = "Failed to delete poll";
+      if (err instanceof Error) {
+        errorMessage = err.message;
+      }
+      if (err.response?.error) {
+        errorMessage = err.response.error;
+      }
+      if (err.body?.error) {
+        errorMessage = err.body.error;
+      }
+      setError(errorMessage);
     }
   };
 
