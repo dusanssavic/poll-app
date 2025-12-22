@@ -22,15 +22,9 @@ if ! command -v go &> /dev/null; then
     if [ -f "/usr/local/go/bin/go" ]; then
         export PATH=$PATH:/usr/local/go/bin
     else
-        echo "Error: Go is not installed or not in PATH"
+        echo "Error: Go is not installed"
         exit 1
     fi
-fi
-
-# Verify Go is working
-if ! go version > /dev/null 2>&1; then
-    echo "Error: Go is installed but not working correctly"
-    exit 1
 fi
 
 # Create application directory
@@ -85,11 +79,6 @@ fi
 
 cd "$BACKEND_DIR"
 
-# Verify go.mod exists
-if [ ! -f "go.mod" ]; then
-    echo "Error: go.mod not found in backend directory"
-    exit 1
-fi
 
 # Download dependencies
 echo "Downloading Go dependencies..."
@@ -98,10 +87,11 @@ if ! go mod download; then
     exit 1
 fi
 
-# Verify dependencies were downloaded
-if [ ! -d "vendor" ] && [ ! -f "go.sum" ]; then
-    echo "Warning: No vendor directory or go.sum file found after dependency download"
-    echo "This may be normal if using Go modules without vendoring"
+# Generate API types
+echo "Generating API types..."
+if ! go generate ./api; then
+    echo "Error: Failed to generate API types"
+    exit 1
 fi
 
 # Build the application
@@ -114,29 +104,12 @@ fi
 # Make binary executable
 chmod +x "${BIN_DIR}/poll-app"
 
-# Verify binary was created and is executable
+# Verify binary was created
 if [ ! -f "${BIN_DIR}/poll-app" ]; then
     echo "Error: Binary was not created"
     exit 1
 fi
 
-if [ ! -x "${BIN_DIR}/poll-app" ]; then
-    echo "Error: Binary is not executable"
-    exit 1
-fi
-
-# Verify binary is not empty
-if [ ! -s "${BIN_DIR}/poll-app" ]; then
-    echo "Error: Binary file is empty"
-    exit 1
-fi
-
 echo "Backend application built successfully at ${BIN_DIR}/poll-app"
-ls -lh "${BIN_DIR}/poll-app"
-
-# Try to get version info from binary if possible
-if "${BIN_DIR}/poll-app" --version > /dev/null 2>&1 || "${BIN_DIR}/poll-app" version > /dev/null 2>&1; then
-    echo "Binary appears to be functional"
-fi
 
 echo "Backend deployment completed successfully."

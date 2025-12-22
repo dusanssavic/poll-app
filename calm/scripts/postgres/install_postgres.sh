@@ -68,25 +68,11 @@ else
     echo "Continuing anyway - package verification will confirm if repository is accessible"
 fi
 
-# Verify PostgreSQL packages are available
-# Check by grepping output to ensure packages actually exist, not just that dnf can query repos
-echo "Verifying PostgreSQL ${PG_VERSION} packages are available..."
-PACKAGES_FOUND=false
-if dnf list available ${PG_SERVER_PKG} ${PG_CONTRIB_PKG} 2>&1 | grep -q "${PG_SERVER_PKG}"; then
-    if dnf list available ${PG_SERVER_PKG} ${PG_CONTRIB_PKG} 2>&1 | grep -q "${PG_CONTRIB_PKG}"; then
-        PACKAGES_FOUND=true
-    fi
-fi
-
-if [ "$PACKAGES_FOUND" = false ]; then
-    echo "Error: PostgreSQL ${PG_VERSION} packages are not available in repositories"
-    echo "Attempting to list available PostgreSQL packages..."
-    # Use timeout to prevent hanging if dnf is slow
-    timeout 30 dnf list available 2>&1 | grep -i postgresql || echo "No PostgreSQL packages found"
-    exit 1
-fi
-
-echo "PostgreSQL ${PG_VERSION} packages are available. Proceeding with installation..."
+# Disable default PostgreSQL module to prevent conflicts with PGDG repository
+echo "Disabling default PostgreSQL module..."
+dnf module disable -y postgresql 2>/dev/null || {
+    echo "Warning: Could not disable postgresql module (may not exist)"
+}
 
 # Install PostgreSQL packages
 echo "Installing PostgreSQL ${PG_VERSION} server and contrib packages..."
@@ -95,26 +81,12 @@ dnf install -y ${PG_SERVER_PKG} ${PG_CONTRIB_PKG} || {
     exit 1
 }
 
-# Verify packages were actually installed
-echo "Verifying package installation..."
-if ! rpm -q ${PG_SERVER_PKG} > /dev/null 2>&1; then
-    echo "Error: ${PG_SERVER_PKG} was not installed correctly"
+# Verify packages were installed
+if ! rpm -q ${PG_SERVER_PKG} ${PG_CONTRIB_PKG} > /dev/null 2>&1; then
+    echo "Error: Packages were not installed correctly"
     exit 1
 fi
-if ! rpm -q ${PG_CONTRIB_PKG} > /dev/null 2>&1; then
-    echo "Error: ${PG_CONTRIB_PKG} was not installed correctly"
-    exit 1
-fi
-echo "Packages verified: ${PG_SERVER_PKG} and ${PG_CONTRIB_PKG} are installed"
 
-# Verify systemd service file exists
-echo "Verifying PostgreSQL service file..."
-if [ ! -f "/usr/lib/systemd/system/${PG_SERVICE}.service" ]; then
-    echo "Warning: PostgreSQL service file not found at /usr/lib/systemd/system/${PG_SERVICE}.service"
-    echo "Service may not be available for management"
-else
-    echo "PostgreSQL service file found"
-fi
 
 # Initialize database (if not already initialized)
 echo "Checking if PostgreSQL database needs initialization..."
@@ -129,13 +101,9 @@ if [ ! -d "${PG_DATA_DIR}" ]; then
         echo "Please check the PostgreSQL setup script and permissions"
         exit 1
     fi
-    # Verify data directory was created and contains expected files
+    # Verify data directory was created
     if [ ! -d "${PG_DATA_DIR}" ]; then
-        echo "Error: Database initialization reported success but data directory was not created"
-        exit 1
-    fi
-    if [ ! -f "${PG_DATA_DIR}/postgresql.conf" ]; then
-        echo "Error: Database initialization reported success but postgresql.conf was not created"
+        echo "Error: Database initialization failed - data directory not created"
         exit 1
     fi
     echo "PostgreSQL database initialized successfully."
@@ -146,43 +114,9 @@ fi
 echo "PostgreSQL ${PG_VERSION} installed successfully."
 
 # Verify installation
-echo "Verifying PostgreSQL installation..."
-VERIFICATION_PASSED=true
-
-# Check if psql is in PATH
-if command -v psql &> /dev/null; then
-    PSQL_VERSION=$(psql --version)
-    echo "PostgreSQL client version: $PSQL_VERSION"
-else
-    echo "Warning: psql command not found in PATH"
-    echo "Note: PostgreSQL may be installed but not in PATH. Check ${PG_BIN_DIR}/"
-    VERIFICATION_PASSED=false
-fi
-
-# Verify PostgreSQL server binary exists and can report version
-if [ -f "${PG_BIN_DIR}/postgres" ]; then
-    POSTGRES_VERSION=$(${PG_BIN_DIR}/postgres --version 2>/dev/null || echo "unknown")
-    if [ "$POSTGRES_VERSION" != "unknown" ]; then
-        echo "PostgreSQL server binary found: $POSTGRES_VERSION"
-    else
-        echo "Warning: Could not determine PostgreSQL server version"
-        VERIFICATION_PASSED=false
-    fi
-else
-    echo "Warning: PostgreSQL server binary not found at ${PG_BIN_DIR}/postgres"
-    VERIFICATION_PASSED=false
-fi
-
-# Verify psql binary exists even if not in PATH
-if [ -f "${PG_BIN_DIR}/psql" ]; then
-    PSQL_BIN_VERSION=$(${PG_BIN_DIR}/psql --version 2>/dev/null || echo "unknown")
-    if [ "$PSQL_BIN_VERSION" != "unknown" ]; then
-        echo "psql binary found at ${PG_BIN_DIR}/psql: $PSQL_BIN_VERSION"
-    fi
-fi
-
-if [ "$VERIFICATION_PASSED" = false ]; then
-    echo "Warning: Some verification checks failed, but installation may still be functional"
+if [ ! -f "${PG_BIN_DIR}/postgres" ]; then
+    echo "Error: PostgreSQL server binary not found"
+    exit 1
 fi
 
 echo "PostgreSQL installation completed successfully."

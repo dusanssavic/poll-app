@@ -20,9 +20,9 @@ test:
 	@echo "Running tests..."
 	@POSTGRES_HOST=localhost \
 	 POSTGRES_PORT=5432 \
-	 POSTGRES_USER=pollapp \
-	 POSTGRES_PASSWORD=pollapp \
-	 POSTGRES_DB=pollapp \
+	 POSTGRES_USER=postgres \
+	 POSTGRES_PASSWORD=postgres \
+	 POSTGRES_DB=postgres \
 	 POSTGRES_SSLMODE=disable \
 	 REDIS_HOST=localhost \
 	 REDIS_PORT=6379 \

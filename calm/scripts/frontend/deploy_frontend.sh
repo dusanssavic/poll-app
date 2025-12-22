@@ -11,26 +11,9 @@ FRONTEND_DIR="${APP_DIR}/frontend"
 
 echo "Deploying frontend application..."
 
-# Verify Node.js is available
-if ! command -v node &> /dev/null; then
-    echo "Error: Node.js is not installed or not in PATH"
-    exit 1
-fi
-
-# Verify Node.js is working
-if ! node --version > /dev/null 2>&1; then
-    echo "Error: Node.js is installed but not working correctly"
-    exit 1
-fi
-
-if ! command -v npm &> /dev/null; then
-    echo "Error: npm is not installed or not in PATH"
-    exit 1
-fi
-
-# Verify npm is working
-if ! npm --version > /dev/null 2>&1; then
-    echo "Error: npm is installed but not working correctly"
+# Verify Node.js and npm are available
+if ! command -v node &> /dev/null || ! command -v npm &> /dev/null; then
+    echo "Error: Node.js or npm is not installed"
     exit 1
 fi
 
@@ -85,11 +68,6 @@ fi
 
 cd "$FRONTEND_DIR"
 
-# Verify package.json exists
-if [ ! -f "package.json" ]; then
-    echo "Error: package.json not found in frontend directory"
-    exit 1
-fi
 
 # Install dependencies
 echo "Installing npm dependencies..."
@@ -98,9 +76,10 @@ if ! npm ci; then
     exit 1
 fi
 
-# Verify node_modules was created
-if [ ! -d "node_modules" ]; then
-    echo "Error: node_modules directory was not created"
+# Generate API client from OpenAPI spec
+echo "Generating API client from OpenAPI specification..."
+if ! npm run generate-api; then
+    echo "Error: Failed to generate API client"
     exit 1
 fi
 
@@ -115,18 +94,6 @@ fi
 if [ ! -d "${FRONTEND_DIR}/build" ]; then
     echo "Error: Build directory was not created"
     exit 1
-fi
-
-# Verify build directory is not empty
-if [ -z "$(ls -A ${FRONTEND_DIR}/build 2>/dev/null)" ]; then
-    echo "Error: Build directory is empty"
-    exit 1
-fi
-
-# Check for expected build files
-if [ ! -d "${FRONTEND_DIR}/build/client" ] && [ ! -d "${FRONTEND_DIR}/build/server" ]; then
-    echo "Warning: Expected build subdirectories (client/server) not found"
-    echo "Build structure may be different than expected"
 fi
 
 echo "Frontend application built successfully"

@@ -34,12 +34,10 @@ dnf install -y redis || {
 }
 
 # Verify Redis package was installed
-echo "Verifying Redis installation..."
 if ! rpm -q redis > /dev/null 2>&1; then
     echo "Error: Redis package was not installed correctly"
     exit 1
 fi
-echo "Redis package verified: $(rpm -q redis)"
 
 # Configure Redis to listen on localhost only (for security)
 echo "Configuring Redis..."
@@ -66,14 +64,6 @@ else
     echo "Warning: Redis config file not found at $REDIS_CONF"
 fi
 
-# Verify systemd service file exists
-echo "Verifying Redis service file..."
-if [ ! -f "/usr/lib/systemd/system/redis.service" ]; then
-    echo "Warning: Redis service file not found at /usr/lib/systemd/system/redis.service"
-    echo "Service may not be available for management"
-else
-    echo "Redis service file found"
-fi
 
 # Start and enable Redis service
 echo "Starting Redis service..."
@@ -98,13 +88,8 @@ for i in {1..30}; do
 done
 
 # Verify Redis is running
-echo "Verifying Redis is running..."
-if redis-cli ping 2>&1 | grep -q "PONG"; then
-    echo "Redis is running successfully"
-    REDIS_INFO=$(redis-cli info server 2>&1 | grep "redis_version" || echo "version unknown")
-    echo "Redis info: $REDIS_INFO"
-else
-    echo "Error: Redis may not be responding correctly"
+if ! redis-cli ping 2>&1 | grep -q "PONG"; then
+    echo "Error: Redis is not responding"
     exit 1
 fi
 

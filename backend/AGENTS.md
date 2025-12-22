@@ -81,11 +81,9 @@ The following environment variables can be set (defaults shown):
 
 ```bash
 # PostgreSQL
+# Note: Database name, username, and password are hardcoded to postgres/postgres/postgres
 POSTGRES_HOST=localhost
 POSTGRES_PORT=5432
-POSTGRES_USER=pollapp
-POSTGRES_PASSWORD=pollapp
-POSTGRES_DB=pollapp
 POSTGRES_SSLMODE=disable
 
 # Redis
@@ -96,6 +94,8 @@ REDIS_PASSWORD=
 # JWT
 JWT_SECRET_KEY=default-secret-key-change-in-production
 ```
+
+**Database Configuration**: The database name (`postgres`), username (`postgres`), and password (`postgres`) are hardcoded and cannot be changed via environment variables. Only the host, port, and SSL mode are configurable.
 
 ### Run the server
 ```bash

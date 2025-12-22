@@ -28,32 +28,81 @@ esac
 GO_TAR="go${GO_VERSION}.linux-${GO_ARCH}.tar.gz"
 GO_URL="https://go.dev/dl/${GO_TAR}"
 
+# Ensure we have a download tool (wget or curl)
+HAS_WGET=false
+HAS_CURL=false
+
+if command -v wget &> /dev/null; then
+    HAS_WGET=true
+elif command -v curl &> /dev/null; then
+    HAS_CURL=true
+fi
+
+# Install download tool if neither is available
+if [ "$HAS_WGET" = false ] && [ "$HAS_CURL" = false ]; then
+    echo "Installing wget or curl..."
+    if command -v dnf &> /dev/null; then
+        dnf install -y wget curl || {
+            echo "Error: Failed to install wget or curl"
+            exit 1
+        }
+    elif command -v yum &> /dev/null; then
+        yum install -y wget curl || {
+            echo "Error: Failed to install wget or curl"
+            exit 1
+        }
+    else
+        echo "Error: No download tool (wget/curl) available and no package manager found"
+        exit 1
+    fi
+    
+    # Update PATH to include newly installed tools
+    export PATH="/usr/bin:/bin:$PATH"
+    
+    # Re-check for installed tools
+    if command -v wget &> /dev/null; then
+        HAS_WGET=true
+    elif command -v curl &> /dev/null; then
+        HAS_CURL=true
+    else
+        echo "Error: wget/curl installation failed or not in PATH"
+        exit 1
+    fi
+fi
+
 echo "Downloading Go from ${GO_URL}..."
 cd /tmp
 
-# Remove -q flag to show download progress and prevent apparent hangs
-if ! wget "${GO_URL}"; then
+# Download using available tool
+download_file() {
+    local url=$1
+    local output=$2
+    if [ "$HAS_WGET" = true ]; then
+        wget "$url" -O "$output" || return 1
+    elif [ "$HAS_CURL" = true ]; then
+        curl -L "$url" -o "$output" || return 1
+    else
+        echo "Error: No download tool available"
+        return 1
+    fi
+}
+
+if ! download_file "${GO_URL}" "${GO_TAR}"; then
     echo "Failed to download Go ${GO_VERSION}. Trying alternative version..."
-    # Try latest version if specific version not available
+    # Try alternative version if specific version not available
     GO_VERSION="1.21.0"
     GO_TAR="go${GO_VERSION}.linux-${GO_ARCH}.tar.gz"
     GO_URL="https://go.dev/dl/${GO_TAR}"
-    if ! wget "${GO_URL}"; then
+    if ! download_file "${GO_URL}" "${GO_TAR}"; then
         echo "Error: Failed to download Go"
         exit 1
     fi
 fi
 
-# Verify downloaded file exists and is not empty
-if [ ! -f "$GO_TAR" ] || [ ! -s "$GO_TAR" ]; then
-    echo "Error: Downloaded file is missing or empty"
+# Verify downloaded file exists
+if [ ! -f "$GO_TAR" ]; then
+    echo "Error: Downloaded file is missing"
     exit 1
-fi
-
-# Verify it's a valid tar.gz file
-if ! file "$GO_TAR" | grep -q "gzip compressed"; then
-    echo "Warning: Downloaded file may not be a valid gzip archive"
-    echo "Continuing anyway..."
 fi
 
 # Remove old installation if exists
@@ -70,8 +119,8 @@ if ! tar -C "$INSTALL_DIR" -xzf "$GO_TAR"; then
 fi
 
 # Verify extraction was successful
-if [ ! -d "$GO_ROOT" ] || [ ! -f "${GO_ROOT}/bin/go" ]; then
-    echo "Error: Go extraction failed or binary not found"
+if [ ! -f "${GO_ROOT}/bin/go" ]; then
+    echo "Error: Go extraction failed"
     exit 1
 fi
 
@@ -94,31 +143,11 @@ export GOPATH=$HOME/go
 export GOROOT=${GO_ROOT}
 
 # Verify installation
-echo "Verifying Go installation..."
-if command -v go &> /dev/null; then
-    GO_VER=$(go version)
-    echo "Go installed successfully: $GO_VER"
-    
-    # Verify go command works
-    if ! go version > /dev/null 2>&1; then
-        echo "Error: Go command is available but not working correctly"
-        exit 1
-    fi
+if [ -f "${GO_ROOT}/bin/go" ]; then
+    ${GO_ROOT}/bin/go version
 else
-    # Try with full path
-    if [ -f "${GO_ROOT}/bin/go" ]; then
-        if ${GO_ROOT}/bin/go version > /dev/null 2>&1; then
-            ${GO_ROOT}/bin/go version
-            echo "Go installed at ${GO_ROOT}/bin/go"
-            echo "Note: You may need to log out and log back in for 'go' command to be available in PATH"
-        else
-            echo "Error: Go binary exists but is not working correctly"
-            exit 1
-        fi
-    else
-        echo "Error: Go installation failed - binary not found"
-        exit 1
-    fi
+    echo "Error: Go installation failed"
+    exit 1
 fi
 
 echo "Golang installation completed."

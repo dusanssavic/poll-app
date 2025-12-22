@@ -15,11 +15,14 @@ import (
 
 // NewClient creates a new ent database client
 func NewClient() (*ent.Client, error) {
+	// Hardcoded database credentials (using default PostgreSQL setup)
+	const dbname = "postgres"
+	const user = "postgres"
+	const password = "postgres"
+
+	// Configurable connection settings
 	host := getEnv("POSTGRES_HOST", "localhost")
 	port := getEnv("POSTGRES_PORT", "5432")
-	user := getEnv("POSTGRES_USER", "pollapp")
-	password := getEnv("POSTGRES_PASSWORD", "pollapp")
-	dbname := getEnv("POSTGRES_DB", "pollapp")
 	sslmode := getEnv("POSTGRES_SSLMODE", "disable")
 
 	dsn := fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=%s",
