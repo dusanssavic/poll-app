@@ -19,8 +19,9 @@ else
     echo "EPEL repository installed successfully."
     
     # Refresh metadata after adding repository
+    # Use --assumeyes to automatically accept GPG key imports
     echo "Refreshing dnf metadata..."
-    dnf makecache || {
+    dnf makecache --assumeyes || {
         echo "Warning: dnf makecache encountered some issues after adding EPEL repository"
     }
 fi

@@ -29,8 +29,9 @@ else
     
     # Refresh metadata after adding repository
     # This is critical - dnf needs to download metadata from the newly added repository
+    # Use --assumeyes to automatically accept GPG key imports
     echo "Refreshing dnf metadata to include NodeSource repository..."
-    if dnf makecache; then
+    if dnf makecache --assumeyes; then
         echo "dnf metadata refreshed successfully."
     else
         echo "Warning: dnf makecache encountered some issues after adding NodeSource repository"

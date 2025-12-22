@@ -59,8 +59,9 @@ fi
 # Refresh metadata after adding new repository
 # This is critical - dnf needs to download metadata from the newly added repository
 # before packages from that repository can be queried or installed
+# Use --assumeyes to automatically accept GPG key imports
 echo "Refreshing dnf metadata to include PostgreSQL repository..."
-if dnf makecache; then
+if dnf makecache --assumeyes; then
     echo "dnf metadata refreshed successfully."
 else
     echo "Warning: dnf makecache encountered some issues after adding PostgreSQL repository"
