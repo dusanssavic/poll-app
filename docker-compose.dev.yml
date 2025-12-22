@@ -1,6 +1,6 @@
 services:
   postgres:
-    image: postgres:16
+    image: postgres:15
     container_name: poll-app-postgres
     environment:
       POSTGRES_DB: pollapp

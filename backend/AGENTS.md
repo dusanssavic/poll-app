@@ -31,7 +31,7 @@ backend/
 
 ### Prerequisites
 
-- PostgreSQL 16+ (or use Docker Compose)
+- PostgreSQL 15+ (or use Docker Compose)
 - Redis 7+ (or use Docker Compose)
 - Go 1.25.5+
 - Docker and Docker Compose (for containerized development)
